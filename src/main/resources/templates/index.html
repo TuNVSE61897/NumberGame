@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Number game</title>
+    <style>
+        .input-group input {
+            padding: 5px 10px;
+            margin: 0;
+        }
+
+        .input-group button {
+            padding: 7px 10px;
+            background: #fff;
+            border: 1px solid #d3d3d3;
+            margin: 0;
+        }
+
+        .input-group * {
+            display: inline-block;
+            font-size: 14px;
+        }
+
+        .container {
+            text-align: center;
+            display: inline-block;
+            border: 1px dashed;
+            padding: 20px 40px;
+        }
+
+        body {
+            text-align: center;
+        }
+
+        #btn-renew,
+        #btn-toggle-series {
+            padding: 5px 10px;
+            background: #fff;
+            border: 1px solid #d3d3d3;
+            margin-bottom: 5px;
+        }
+
+        .input-group button:hover,
+        #btn-renew:hover,
+        #btn-toggle-series:hover {
+            background: aliceblue;
+            cursor: pointer;
+        }
+
+        .hide {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h3>Please input a number</h3>
+        <div class="input-group">
+            <input type="number" id="txt-number" placeholder="Input a number" />
+            <button id="btn-check">Check</button>
+        </div>
+        <h5 id="result"></h5>
+        <button id="btn-renew">Renew number series</button>
+        <div style="text-align: center;">
+            <h5 id="series" class="hide"></h5>
+            <button id="btn-toggle-series">Show series</button>
+        </div>
+    </div>
+    <script>
+        function ajax(option) {
+            return new Promise(function (res, rej) {
+                let xhr = new XMLHttpRequest();
+                xhr.open(option.method || 'GET', option.url);
+                if (option.headers) {
+                    for (let header in option.headers) {
+                        xhr.setRequestHeader(header, option.headers[header]);
+                    }
+                }
+                if (option.data !== undefined) {
+                    xhr.send(option.data);
+                } else {
+                    xhr.send();
+                }
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState == 4) {
+                        if (xhr.status == 200) {
+                            res(xhr.response, xhr);
+                        } else {
+                            rej(xhr);
+                        }
+                    }
+                }
+            })
+        }
+
+        const MainOctopus = {
+            init: function () {
+                MainView.init();
+            },
+            playGame(number) {
+                let data = new FormData();
+                data.append('numberValue', number);
+                ajax({
+                    url: '/game/play',
+                    method: 'POST',
+                    data: data
+                }).then(res => {
+                    MainView.showResult(res);
+                }).catch(_ => {
+                    MainView.showResult(
+                        'Something wrong, please reload page and try again!'
+                    );
+                })
+            },
+            resetSeries: function () {
+                ajax({
+                    url: '/game/refresh',
+                    method: 'GET'
+                }).then(res => {
+                    MainView.resetSeriesView();
+                    alert('Number series has been changed!');
+                });
+            },
+            loadSeries: function () {
+                ajax({
+                    url: '/game/get-series',
+                    method: 'GET'
+                }).then(res => {
+                    MainView.showSeries(res);
+                });
+            }
+        }
+
+        const MainView = {
+            txtNumber: null,
+            btnCheck: null,
+            btnRenew: null,
+            btnToggleSeries: null,
+            lblResult: null,
+            lblSeries: null,
+            init: function () {
+                this.txtNumber = document.getElementById('txt-number');
+                this.btnCheck = document.getElementById('btn-check');
+                this.btnRenew = document.getElementById('btn-renew');
+                this.btnToggleSeries = document.getElementById('btn-toggle-series');
+                this.lblResult = document.getElementById('result');
+                this.lblSeries = document.getElementById('series');
+                this.initEventHandler();
+                this.txtNumber.value = '';
+            },
+            initEventHandler: function () {
+                let _this = this;
+                this.txtNumber.addEventListener('keyup', function (ev) {
+                    if (ev.which == 13) {
+                        MainOctopus.playGame(_this.txtNumber.value);
+                    }
+                })
+                this.btnCheck.addEventListener('click', function (ev) {
+                    if (_this.txtNumber.value == '') {
+                        _this.lblResult.innerText = 'Please input the number first!';
+                    } else {
+                        MainOctopus.playGame(_this.txtNumber.value);
+                    }
+                });
+                this.btnRenew.addEventListener('click', function (ev) {
+                    MainOctopus.resetSeries();
+                });
+                this.btnToggleSeries.addEventListener('click', function (ev) {
+                    if (_this.lblSeries.className == 'hide') {
+                        _this.btnToggleSeries.innerText = 'Hide series';
+                        _this.lblSeries.className = '';
+                        _this.lblSeries.innerText = 'Loading...';
+                        MainOctopus.loadSeries();
+                    } else {
+                        _this.lblSeries.className = 'hide';
+                        _this.btnToggleSeries.innerText = 'Show series';
+                    }
+                })
+            },
+            resetSeriesView: function () {
+                this.lblResult.innerText = '';
+                this.txtNumber.value = '';
+                this.lblSeries.className = 'hide';
+                this.btnToggleSeries.innerText = 'Show series';
+            },
+            showResult: function (msg) {
+                this.lblResult.innerText = msg;
+            },
+            showSeries(series) {
+                this.lblSeries.innerText = series;
+            }
+        };
+
+        MainOctopus.init();
+    </script>
+</body>
+
+</html>
